@@ -64,6 +64,8 @@ exports.login = async (req, res) => {
         if (tokens) {
           res.cookie("refreshToken", tokens.refreshToken, {
             httpOnly: true,
+            secure: true,
+            sameSite: "none",
             maxAge: process.env.REFRESH_TOKEN_EXPIRES_IN * 1000,
           });
           res.cookie("accessToken", tokens.accessToken, {
