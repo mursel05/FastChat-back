@@ -70,6 +70,8 @@ exports.login = async (req, res) => {
           });
           res.cookie("accessToken", tokens.accessToken, {
             httpOnly: true,
+            secure: true,
+            sameSite: "none",
             maxAge: process.env.ACCESS_TOKEN_EXPIRES_IN * 1000,
           });
           res.status(200).json({ success: true });
