@@ -1,12 +1,15 @@
 const { WebSocketServer } = require("ws");
+const webSocket = require("../routes/webSocket");
 
-const wsPort = process.env.WS_PORT;
-const wss = new WebSocketServer({ port: wsPort }, (err) => {
-  if (err) {
+function setupWebSocket(server) {
+  const wss = new WebSocketServer({ server });
+
+  wss.on("error", (err) => {
     console.log("WebSocketServer error", err);
-  } else {
-    console.log("WebSocketServer is running on", wsPort);
-  }
-});
+  });
+  wss.on("connection", (ws, req) => {
+    webSocket(wss, ws, req);
+  });
+}
 
-module.exports = wss;
+module.exports = setupWebSocket;

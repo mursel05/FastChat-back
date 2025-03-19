@@ -8,23 +8,16 @@ const fileRoutes = require("./server/routes/file");
 const swaggerUi = require("swagger-ui-express");
 const swaggerSpec = require("./server/config/swagger");
 const path = require("path");
-const webSocket = require("./server/routes/webSocket");
-const wss = require("./server/config/wss");
 const cors = require("cors");
+const http = require("http");
+const setupWebSocket = require("./server/config/wss");
 
-// Load env vars
 dotenv.config();
 
 const app = express();
 const port = process.env.PORT;
-
-// WebSocket
-wss.on("error", (err) => {
-  console.log("WebSocketServer error", err);
-});
-wss.on("connection", (ws, req) => {
-  webSocket(wss, ws, req);
-});
+const server = http.createServer(app);
+setupWebSocket(server);
 
 app.use(
   cors({
@@ -33,31 +26,24 @@ app.use(
   })
 );
 
-// Body parser
 app.use(express.json());
 
-// Connect to the database
 connectDB();
 
-// Routes
 app.use("/api/chats", chatRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/files", fileRoutes);
 
-// Static folder
 app.use("/public", express.static(path.join(__dirname, "public")));
 
-// Swagger
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-// Error handler
 app.use((err, req, res, next) => {
   console.error("Error: ", err);
   res.status(500).json({ success: false, message: "Server error" });
 });
 
-// Start server
-app.listen(port, () => {
+server.listen(port, () => {
   console.log(`Server running on http://localhost:${port}/api-docs`);
 });
