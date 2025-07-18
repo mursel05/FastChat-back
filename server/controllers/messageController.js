@@ -18,6 +18,7 @@ exports.sendMessage = async (req, res) => {
       sender: req.userId,
       message: req.body.message,
       mediaUrl: req.body.mediaUrl,
+      fileName: req.body.fileName,
       messageType: req.body.messageType,
       deleteMessage: [],
       seen: [],

@@ -15,10 +15,6 @@ const personSchema = new Schema({
     type: Date,
     required: true,
   },
-  deleteChat: {
-    type: Boolean,
-    required: true,
-  },
 });
 
 const chatSchema = new Schema({

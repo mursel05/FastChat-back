@@ -13,6 +13,7 @@ exports.messagesDoc = {
                 chatId: { type: "string", description: "The chat ID" },
                 message: { type: "string", description: "The message" },
                 mediaUrl: { type: "string", description: "The media URL" },
+                fileName: { type: "string", description: "The file name" },
                 messageType: {
                   type: "string",
                   description: "The message type",
@@ -39,6 +40,7 @@ exports.messagesDoc = {
                       chatId: { type: "string" },
                       message: { type: "string" },
                       mediaUrl: { type: "string" },
+                      fileName: { type: "string" },
                       messageType: { type: "string" },
                       createdAt: { type: "string" },
                       updatedAt: { type: "string" },

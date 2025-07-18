@@ -17,13 +17,11 @@ exports.addChat = async (req, res) => {
           userId: person,
           role: "member",
           joinedAt: new Date(),
-          deleteChat: false,
         })),
         {
           userId: req.userId,
           role: "admin",
           joinedAt: new Date(),
-          deleteChat: false,
         },
       ],
     });
@@ -35,19 +33,48 @@ exports.addChat = async (req, res) => {
   }
 };
 
+exports.getChat = async (req, res) => {
+  try {
+    const chat = await Chat.findOne({ id: req.params.chatId });
+    if (!chat) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Chat not found" });
+    }
+    if (!chat.persons.some((person) => person.userId === req.userId)) {
+      return res.status(403).json({
+        success: false,
+        message: "You are not a participant of this chat",
+      });
+    }
+    const messages = await Message.find({ chatId: chat.id });
+    const unSeenMessages = await Message.countDocuments({
+      chatId: chat.id,
+      seen: { $not: { $elemMatch: { userId: req.userId } } },
+      sender: { $ne: req.userId },
+    });
+    res.status(200).json({
+      success: true,
+      data: { ...chat.toObject(), messages, unSeenMessages },
+    });
+  } catch (error) {
+    res.status(400).json({ success: false, message: "Something went wrong" });
+  }
+};
+
 exports.getChats = async (req, res) => {
   try {
-    const chats = await Chat.find({ "persons.userId": req.userId });
+    const chats = await Chat.find({
+      persons: { $elemMatch: { userId: req.userId } },
+    });
     const unSeenMessages = await Promise.all(
       chats.map(
         async (chat) =>
-          (
-            await Message.find({
-              chatId: chat.id,
-              "seen.userId": { $ne: req.userId },
-              sender: { $ne: req.userId },
-            })
-          ).length
+          await Message.countDocuments({
+            chatId: chat.id,
+            seen: { $not: { $elemMatch: { userId: req.userId } } },
+            sender: { $ne: req.userId },
+          })
       )
     );
     const chatsWithMessages = await Promise.all(
@@ -74,18 +101,8 @@ exports.deleteChat = async (req, res) => {
         .status(404)
         .json({ success: false, message: "Chat not found" });
     }
-    await Chat.findOneAndUpdate(
-      {
-        id: req.params.chatId,
-        "persons.userId": req.userId,
-      },
-      {
-        $set: {
-          "persons.$.deleteChat": true,
-        },
-      }
-    );
-    res.status(200).json({ success: true });
+    await Chat.findOneAndDelete({ id: req.params.chatId });
+    return res.status(200).json({ success: true });
   } catch (error) {
     res.status(400).json({ success: false, message: "Something went wrong" });
   }

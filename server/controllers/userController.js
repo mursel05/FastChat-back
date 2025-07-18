@@ -198,14 +198,8 @@ exports.resetPassword = async (req, res) => {
 
 exports.updateUser = async (req, res) => {
   try {
-    if (req.userId !== req.params.id) {
-      return res.status(400).json({
-        success: false,
-        message: "You can update only your account",
-      });
-    }
     const user = await User.findOneAndUpdate(
-      { id: req.params.id },
+      { id: req.userId },
       {
         name: req.body.name,
         surname: req.body.surname,

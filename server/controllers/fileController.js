@@ -10,6 +10,7 @@ exports.addFile = async (req, res) => {
       data: {
         fileType: req.fileType,
         filePath: req.filePath,
+        fileName: req.file.originalname,
       },
     });
   } catch (error) {

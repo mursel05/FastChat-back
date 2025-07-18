@@ -46,6 +46,9 @@ const messageSchema = new Schema({
   mediaUrl: {
     type: String,
   },
+  fileName: {
+    type: String,
+  },
   sender: {
     type: String,
     required: true,
