@@ -40,7 +40,7 @@ app.use("/public", express.static(path.join(__dirname, "public")));
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.use((err, req, res, next) => {
-  console.error("Error: ", err);
+  console.log("Error: ", err);
   res.status(500).json({ success: false, message: "Server error" });
 });
 

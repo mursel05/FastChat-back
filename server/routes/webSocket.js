@@ -1,3 +1,4 @@
+const wssData = require("../config/wssData");
 const { verifyAccessToken } = require("../controllers/tokenController");
 const {
   userConnected,
@@ -15,6 +16,25 @@ const webSocket = (wss, ws, req) => {
     return;
   }
   userConnected(wss, ws, decoded.sub);
+  ws.on("message", (message) => {
+    const parsedMessage = JSON.parse(message);
+    if (
+      ["callOffer", "callAnswer", "callCandidate", "callEnd"].includes(
+        parsedMessage.type
+      )
+    ) {
+      wssData.users.forEach(
+        (user) =>
+          parsedMessage.data.userId === user.id &&
+          user.ws.send(
+            JSON.stringify({
+              ...parsedMessage,
+              data: { ...parsedMessage.data, userId: decoded.sub },
+            })
+          )
+      );
+    }
+  });
   ws.on("close", () => userDisconnected(wss, decoded.sub));
   ws.on("error", () => userErrored(ws));
 };
