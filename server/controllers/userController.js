@@ -5,6 +5,7 @@ const crypto = require("crypto");
 const { sendMail } = require("../utils/mailSender");
 const cookie = require("cookie");
 const Token = require("../models/token");
+const client = require("../config/auth");
 
 exports.register = async (req, res) => {
   try {
@@ -28,6 +29,8 @@ exports.register = async (req, res) => {
         updatedAt: new Date(),
         subscription: "free",
         lastSeen: new Date(),
+        provider: "local",
+        providerId: uuidv4(),
       });
       await newUser.save();
       const tokens = await createTokens(newUser.id);
@@ -56,32 +59,39 @@ exports.login = async (req, res) => {
   try {
     const user = await User.findOne({ email: req.body.email });
     if (user) {
-      if (
-        user.password ===
-        crypto.createHash("sha256").update(req.body.password).digest("hex")
-      ) {
-        const tokens = await createTokens(user.id);
-        if (tokens) {
-          res.cookie("refreshToken", tokens.refreshToken, {
-            httpOnly: true,
-            secure: true,
-            sameSite: "none",
-            maxAge: process.env.REFRESH_TOKEN_EXPIRES_IN * 1000,
-          });
-          res.cookie("accessToken", tokens.accessToken, {
-            httpOnly: true,
-            secure: true,
-            sameSite: "none",
-            maxAge: process.env.ACCESS_TOKEN_EXPIRES_IN * 1000,
-          });
-          res.status(200).json({ success: true });
+      if (user.provider === "local") {
+        if (
+          user.password ===
+          crypto.createHash("sha256").update(req.body.password).digest("hex")
+        ) {
+          const tokens = await createTokens(user.id);
+          if (tokens) {
+            res.cookie("refreshToken", tokens.refreshToken, {
+              httpOnly: true,
+              secure: true,
+              sameSite: "none",
+              maxAge: process.env.REFRESH_TOKEN_EXPIRES_IN * 1000,
+            });
+            res.cookie("accessToken", tokens.accessToken, {
+              httpOnly: true,
+              secure: true,
+              sameSite: "none",
+              maxAge: process.env.ACCESS_TOKEN_EXPIRES_IN * 1000,
+            });
+            res.status(200).json({ success: true });
+          } else {
+            res
+              .status(400)
+              .json({ success: false, message: "Something went wrong" });
+          }
         } else {
-          res
-            .status(400)
-            .json({ success: false, message: "Something went wrong" });
+          res.status(400).json({ success: false, message: "Invalid password" });
         }
       } else {
-        res.status(400).json({ success: false, message: "Invalid password" });
+        res.status(400).json({
+          success: false,
+          message: "Log in using Google",
+        });
       }
     } else {
       res.status(404).json({ success: false, message: "Account not found" });
@@ -270,5 +280,121 @@ exports.getUser = async (req, res) => {
     }
   } catch (error) {
     res.status(400).json({ success: false, message: "Something went wrong" });
+  }
+};
+
+exports.logOut = async (req, res) => {
+  try {
+    res.cookie("refreshToken", "", { maxAge: 0 });
+    res.cookie("accessToken", "", { maxAge: 0 });
+    res.status(200).json({ success: true });
+  } catch (error) {
+    res.status(400).json({ success: false, message: "Something went wrong" });
+  }
+};
+
+exports.signUpWithGoogle = async (req, res) => {
+  try {
+    const { token } = req.body;
+
+    const ticket = await client.verifyIdToken({
+      idToken: token,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+    const { sub: googleId, email, name, picture } = payload;
+    const user = await User.findOne({ email });
+    if (user) {
+      res
+        .status(400)
+        .json({ success: false, message: "Account already exists" });
+    } else {
+      const newUser = new User({
+        id: uuidv4(),
+        name: name.split(" ")[0],
+        surname: name.split(" ")[1] || "",
+        photo: picture || "",
+        email: email,
+        password: "",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        subscription: "free",
+        lastSeen: new Date(),
+        provider: "google",
+        providerId: googleId,
+      });
+      await newUser.save();
+      const tokens = await createTokens(newUser.id);
+      if (tokens) {
+        res.cookie("refreshToken", tokens.refreshToken, {
+          httpOnly: true,
+          maxAge: process.env.REFRESH_TOKEN_EXPIRES_IN * 1000,
+        });
+        res.cookie("accessToken", tokens.accessToken, {
+          httpOnly: true,
+          maxAge: process.env.ACCESS_TOKEN_EXPIRES_IN * 1000,
+        });
+        res.status(201).json({ success: true });
+      } else {
+        res
+          .status(400)
+          .json({ success: false, message: "Something went wrong" });
+      }
+    }
+  } catch (error) {
+    console.log(error);
+    
+    res.status(400).json({
+      success: false,
+      message: "Google authentication failed",
+    });
+  }
+};
+
+exports.signInWithGoogle = async (req, res) => {
+  try {
+    const { token } = req.body;
+
+    const ticket = await client.verifyIdToken({
+      idToken: token,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+    const { email } = payload;
+    const user = await User.findOne({ email });
+    if (user) {
+      if (user.provider === "google") {
+        const tokens = await createTokens(user.id);
+        if (tokens) {
+          res.cookie("refreshToken", tokens.refreshToken, {
+            httpOnly: true,
+            maxAge: process.env.REFRESH_TOKEN_EXPIRES_IN * 1000,
+          });
+          res.cookie("accessToken", tokens.accessToken, {
+            httpOnly: true,
+            maxAge: process.env.ACCESS_TOKEN_EXPIRES_IN * 1000,
+          });
+          res.status(200).json({ success: true });
+        } else {
+          res
+            .status(400)
+            .json({ success: false, message: "Something went wrong" });
+        }
+      } else {
+        res.status(400).json({
+          success: false,
+          message: "Account is not registered with Google",
+        });
+      }
+    } else {
+      res.status(404).json({ success: false, message: "Account not found" });
+    }
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      message: "Google authentication failed",
+    });
   }
 };

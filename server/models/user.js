@@ -26,7 +26,6 @@ const UserSchema = new Schema({
   },
   password: {
     type: String,
-    required: true,
   },
   createdAt: {
     type: Date,
@@ -43,6 +42,14 @@ const UserSchema = new Schema({
   },
   lastSeen: {
     type: Schema.Types.Mixed,
+    required: true,
+  },
+  provider: {
+    type: String,
+    required: true,
+  },
+  providerId: {
+    type: String,
     required: true,
   },
 });
