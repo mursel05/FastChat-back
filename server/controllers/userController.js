@@ -7,6 +7,13 @@ const cookie = require("cookie");
 const Token = require("../models/token");
 const client = require("../config/auth");
 
+const cookieOptions = {
+  httpOnly: true,
+  sameSite: "none",
+  secure: true,
+  domain: ".code.run",
+};
+
 exports.register = async (req, res) => {
   try {
     const user = await User.findOne({ email: req.body.email });
@@ -36,11 +43,11 @@ exports.register = async (req, res) => {
       const tokens = await createTokens(newUser.id);
       if (tokens) {
         res.cookie("refreshToken", tokens.refreshToken, {
-          httpOnly: true,
+          ...cookieOptions,
           maxAge: process.env.REFRESH_TOKEN_EXPIRES_IN * 1000,
         });
         res.cookie("accessToken", tokens.accessToken, {
-          httpOnly: true,
+          ...cookieOptions,
           maxAge: process.env.ACCESS_TOKEN_EXPIRES_IN * 1000,
         });
         res.status(201).json({ success: true });
@@ -344,7 +351,7 @@ exports.signUpWithGoogle = async (req, res) => {
     }
   } catch (error) {
     console.log(error);
-    
+
     res.status(400).json({
       success: false,
       message: "Google authentication failed",
