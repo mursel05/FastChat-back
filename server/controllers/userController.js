@@ -11,7 +11,6 @@ const cookieOptions = {
   httpOnly: true,
   sameSite: "none",
   secure: true,
-  domain: ".code.run",
 };
 
 exports.register = async (req, res) => {
