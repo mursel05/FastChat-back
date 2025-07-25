@@ -18,11 +18,7 @@ const webSocket = (wss, ws, req) => {
   userConnected(wss, ws, decoded.sub);
   ws.on("message", (message) => {
     const parsedMessage = JSON.parse(message);
-    if (
-      ["callOffer", "callAnswer", "callCandidate", "callEnd"].includes(
-        parsedMessage.type
-      )
-    ) {
+    if (parsedMessage.type.includes("call")) {
       wssData.users.forEach(
         (user) =>
           parsedMessage.data.userId === user.id &&

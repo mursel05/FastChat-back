@@ -45,5 +45,5 @@ app.use((err, req, res, next) => {
 });
 
 server.listen(port, () => {
-  console.log(`Server running on http://localhost:${port}/api-docs`);
+  console.log(`Server running on ${port}`);
 });
