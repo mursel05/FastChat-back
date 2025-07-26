@@ -7,11 +7,14 @@ const cookie = require("cookie");
 const Token = require("../models/token");
 const client = require("../config/auth");
 
-const cookieOptions = {
-  httpOnly: true,
-  sameSite: "none",
-  secure: true,
-};
+const cookieOptions =
+  process.env.NODE_ENV === "production"
+    ? {
+        httpOnly: true,
+        sameSite: "none",
+        secure: true,
+      }
+    : {};
 
 exports.register = async (req, res) => {
   try {
@@ -73,15 +76,11 @@ exports.login = async (req, res) => {
           const tokens = await createTokens(user.id);
           if (tokens) {
             res.cookie("refreshToken", tokens.refreshToken, {
-              httpOnly: true,
-              secure: true,
-              sameSite: "none",
+              ...cookieOptions,
               maxAge: process.env.REFRESH_TOKEN_EXPIRES_IN * 1000,
             });
             res.cookie("accessToken", tokens.accessToken, {
-              httpOnly: true,
-              secure: true,
-              sameSite: "none",
+              ...cookieOptions,
               maxAge: process.env.ACCESS_TOKEN_EXPIRES_IN * 1000,
             });
             res.status(200).json({ success: true });
@@ -116,11 +115,11 @@ exports.refreshTokens = async (req, res) => {
       const tokens = await createTokens(decoded.sub);
       if (tokens) {
         res.cookie("refreshToken", tokens.refreshToken, {
-          httpOnly: true,
+          ...cookieOptions,
           maxAge: process.env.REFRESH_TOKEN_EXPIRES_IN * 1000,
         });
         res.cookie("accessToken", tokens.accessToken, {
-          httpOnly: true,
+          ...cookieOptions,
           maxAge: process.env.ACCESS_TOKEN_EXPIRES_IN * 1000,
         });
         res.status(200).json({ success: true });
@@ -334,11 +333,11 @@ exports.signUpWithGoogle = async (req, res) => {
       const tokens = await createTokens(newUser.id);
       if (tokens) {
         res.cookie("refreshToken", tokens.refreshToken, {
-          httpOnly: true,
+          ...cookieOptions,
           maxAge: process.env.REFRESH_TOKEN_EXPIRES_IN * 1000,
         });
         res.cookie("accessToken", tokens.accessToken, {
-          httpOnly: true,
+          ...cookieOptions,
           maxAge: process.env.ACCESS_TOKEN_EXPIRES_IN * 1000,
         });
         res.status(201).json({ success: true });
@@ -349,8 +348,6 @@ exports.signUpWithGoogle = async (req, res) => {
       }
     }
   } catch (error) {
-    console.log(error);
-
     res.status(400).json({
       success: false,
       message: "Google authentication failed",
@@ -375,11 +372,11 @@ exports.signInWithGoogle = async (req, res) => {
         const tokens = await createTokens(user.id);
         if (tokens) {
           res.cookie("refreshToken", tokens.refreshToken, {
-            httpOnly: true,
+            ...cookieOptions,
             maxAge: process.env.REFRESH_TOKEN_EXPIRES_IN * 1000,
           });
           res.cookie("accessToken", tokens.accessToken, {
-            httpOnly: true,
+            ...cookieOptions,
             maxAge: process.env.ACCESS_TOKEN_EXPIRES_IN * 1000,
           });
           res.status(200).json({ success: true });
