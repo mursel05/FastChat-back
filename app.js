@@ -29,6 +29,11 @@ async function buildFastify() {
     await fastify.register(require("@fastify/websocket"));
 
     // Register Swagger
+    const { chatsDoc } = require("./server/docs/chat");
+    const { messagesDoc } = require("./server/docs/message");
+    const { userDoc } = require("./server/docs/user");
+    const { fileDoc } = require("./server/docs/file");
+
     await fastify.register(require("@fastify/swagger"), {
       openapi: {
         openapi: "3.0.0",
@@ -47,6 +52,12 @@ async function buildFastify() {
             description: "Development server",
           },
         ],
+        paths: {
+          ...chatsDoc,
+          ...messagesDoc,
+          ...userDoc,
+          ...fileDoc,
+        },
       },
     });
 
