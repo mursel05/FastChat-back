@@ -1,11 +1,12 @@
-const express = require("express");
-const router = express.Router();
 const messageController = require("../controllers/messageController");
 const { authenticate } = require("../middlewares/auth");
+const { wrapExpressHandler } = require("../utils/expressWrapper");
 
-router.post("/", authenticate, messageController.sendMessage);
-router.get("/:chatId", authenticate, messageController.getMessages);
-router.delete("/:messageId", authenticate, messageController.deleteMessage);
-router.post("/seen-message", authenticate, messageController.seenMessage);
+async function routes(fastify, options) {
+  fastify.post("/", { preHandler: authenticate }, wrapExpressHandler(messageController.sendMessage));
+  fastify.get("/:chatId", { preHandler: authenticate }, wrapExpressHandler(messageController.getMessages));
+  fastify.delete("/:messageId", { preHandler: authenticate }, wrapExpressHandler(messageController.deleteMessage));
+  fastify.post("/seen-message", { preHandler: authenticate }, wrapExpressHandler(messageController.seenMessage));
+}
 
-module.exports = router;
+module.exports = routes;

@@ -1,20 +1,20 @@
 const cookie = require("cookie");
 const { verifyAccessToken } = require("../controllers/tokenController");
 
-exports.authenticate = (req, res, next) => {
+// Fastify preHandler for authentication
+exports.authenticate = async (request, reply) => {
   try {
-    const cookies = req.headers.cookie ? cookie.parse(req.headers.cookie) : {};
+    const cookies = request.headers.cookie ? cookie.parse(request.headers.cookie) : {};
     const accessToken = cookies.accessToken;
     if (!accessToken) {
-      return res.status(401).json({ success: false, message: "Unauthorized" });
+      return reply.status(401).send({ success: false, message: "Unauthorized" });
     }
     const decoded = verifyAccessToken(accessToken);
     if (!decoded) {
-      return res.status(401).json({ success: false, message: "Unauthorized" });
+      return reply.status(401).send({ success: false, message: "Unauthorized" });
     }
-    req.userId = decoded.sub;
-    next();
+    request.userId = decoded.sub;
   } catch (error) {
-    return res.status(401).json({ success: false, message: "Unauthorized" });
+    return reply.status(401).send({ success: false, message: "Unauthorized" });
   }
 };

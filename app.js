@@ -1,49 +1,100 @@
-const express = require("express");
+const fastify = require("fastify")({
+  logger: false
+});
 const dotenv = require("dotenv");
 const connectDB = require("./server/config/db");
-const messageRoutes = require("./server/routes/message");
-const chatRoutes = require("./server/routes/chat");
-const userRoutes = require("./server/routes/user");
-const fileRoutes = require("./server/routes/file");
-const swaggerUi = require("swagger-ui-express");
-const swaggerSpec = require("./server/config/swagger");
 const path = require("path");
-const cors = require("cors");
-const http = require("http");
-const setupWebSocket = require("./server/config/wss");
 
 dotenv.config();
 
-const app = express();
-const port = process.env.PORT;
-const server = http.createServer(app);
-setupWebSocket(server);
+// Register plugins
+async function buildFastify() {
+  try {
+    // Register CORS
+    await fastify.register(require("@fastify/cors"), {
+      origin: process.env.CLIENT_URL,
+      credentials: true,
+    });
 
-app.use(
-  cors({
-    origin: process.env.CLIENT_URL,
-    credentials: true,
-  })
-);
+    // Register multipart for file uploads
+    await fastify.register(require("@fastify/multipart"));
 
-app.use(express.json());
+    // Register static files
+    await fastify.register(require("@fastify/static"), {
+      root: path.join(__dirname, "public"),
+      prefix: "/public/",
+    });
 
-connectDB();
+    // Register WebSocket
+    await fastify.register(require("@fastify/websocket"));
 
-app.use("/api/chats", chatRoutes);
-app.use("/api/messages", messageRoutes);
-app.use("/api/users", userRoutes);
-app.use("/api/files", fileRoutes);
+    // Register Swagger
+    await fastify.register(require("@fastify/swagger"), {
+      openapi: {
+        openapi: "3.0.0",
+        info: {
+          title: "FastChat API",
+          version: "1.0.0",
+          description: "API Documentation for FastChat",
+        },
+        servers: [
+          {
+            url: "http://localhost:5000/api",
+            description: "Local server",
+          },
+          {
+            url: "https://melodies-back.onrender.com",
+            description: "Development server",
+          },
+        ],
+      },
+    });
 
-app.use("/public", express.static(path.join(__dirname, "public")));
+    await fastify.register(require("@fastify/swagger-ui"), {
+      routePrefix: "/api-docs",
+      uiConfig: {
+        docExpansion: "full",
+        deepLinking: false,
+      },
+    });
 
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+    // Connect to MongoDB
+    connectDB();
 
-app.use((err, req, res, next) => {
-  console.log("Error: ", err);
-  res.status(500).json({ success: false, message: "Server error" });
-});
+    // Register routes
+    await fastify.register(require("./server/routes/user"), { prefix: "/api/users" });
+    await fastify.register(require("./server/routes/message"), { prefix: "/api/messages" });
+    await fastify.register(require("./server/routes/chat"), { prefix: "/api/chats" });
+    await fastify.register(require("./server/routes/file"), { prefix: "/api/files" });
 
-server.listen(port, () => {
-  console.log(`Server running on ${port}`);
-});
+    // Register WebSocket routes
+    await fastify.register(require("./server/routes/webSocket"), { prefix: "/ws" });
+
+    // Error handling
+    fastify.setErrorHandler((error, request, reply) => {
+      console.log("Error: ", error);
+      reply.status(500).send({ success: false, message: "Server error" });
+    });
+
+    return fastify;
+  } catch (err) {
+    console.error("Error building Fastify app:", err);
+    process.exit(1);
+  }
+}
+
+// Start server
+const start = async () => {
+  try {
+    const app = await buildFastify();
+    const port = process.env.PORT || 5000;
+    
+    await app.listen({ port, host: "0.0.0.0" });
+    console.log(`Server running on ${port}`);
+  } catch (err) {
+    console.error("Error starting server:", err);
+    process.exit(1);
+  }
+};
+
+start();

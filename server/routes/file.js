@@ -1,21 +1,21 @@
-const express = require("express");
-const router = express.Router();
 const fileController = require("../controllers/fileController");
-const { publicUpload, privateUpload } = require("../utils/storage");
 const { authenticate } = require("../middlewares/auth");
+const { wrapExpressHandler } = require("../utils/expressWrapper");
+const { handlePublicUpload, handlePrivateUpload } = require("../utils/fileUpload");
 
-router.post(
-  "/:chatId",
-  authenticate,
-  privateUpload.single("file"),
-  fileController.addFile
-);
-router.post(
-  "/",
-  authenticate,
-  publicUpload.single("file"),
-  fileController.addFile
-);
-router.get("/:chatId/:filename", authenticate, fileController.getFile);
+async function routes(fastify, options) {
+  // Private file upload (with chatId)
+  fastify.post("/:chatId", {
+    preHandler: [authenticate, handlePrivateUpload],
+  }, wrapExpressHandler(fileController.addFile));
 
-module.exports = router;
+  // Public file upload
+  fastify.post("/", {
+    preHandler: [authenticate, handlePublicUpload],
+  }, wrapExpressHandler(fileController.addFile));
+
+  // Get file
+  fastify.get("/:chatId/:filename", { preHandler: authenticate }, wrapExpressHandler(fileController.getFile));
+}
+
+module.exports = routes;
